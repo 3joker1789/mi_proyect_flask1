@@ -26,7 +26,7 @@ if __name__ == '__main__':
         app.config['SECRET_KEY'] = 'supersecretkey'  # Required for CSRF protection
 
         @app.route('/form', methods=['GET', 'POST'])
-        def form():
+        def form(self):
             form = NameForm()
             if form.validate_on_submit():
                 name = form.name.data
