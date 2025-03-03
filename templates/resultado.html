@@ -1,11 +1,8 @@
-       <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resultado</title>
-</head>
-<body>
-    <h1>¡Hola, {{ name }}!</h1>
-</body>
-</html>
+    {% extends "base.html" %}
+
+{% block content %}
+  <h1>Datos recibidos</h1>
+  <p><strong>Nombre:</strong> {{ nombre }}</p>
+  <p><strong>Email:</strong> {{ email }}</p>
+  <a href="{{ url_for('formulario') }}" class="btn btn-secondary">Volver</a>
+{% endblock %}
