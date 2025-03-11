@@ -4,7 +4,7 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired, Email
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'tu_clave_secreta_aqui'  # Cambia esto en producción
+app.config['SECRET_KEY'] = 'tu_llave_secreta_aqui'  # Cambia esto en producción
 
 class MiFormulario(FlaskForm):
     nombre = StringField('Nombre', validators=[DataRequired(message="El nombre es obligatorio")])
