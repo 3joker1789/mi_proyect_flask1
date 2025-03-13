@@ -1,34 +1,12 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% block content %}
-  <h1>Formulario</h1>
-  <form method="POST" action="{{ url_for('formulario') }}">
-    {{ form.hidden_tag() }}
-
-    <div class="form-group">
-      {{ form.nombre.label }}
-      {{ form.nombre(class="form-control") }}
-      {% if form.nombre.errors %}
-        <div class="text-danger">
-          {% for error in form.nombre.errors %}
-            <small>{{ error }}</small>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="form-group">
-      {{ form.email.label }}
-      {{ form.email(class="form-control") }}
-      {% if form.email.errors %}
-        <div class="text-danger">
-          {% for error in form.email.errors %}
-            <small>{{ error }}</small>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-
-    {{ form.enviar(class="btn btn-primary") }}
+  <h2>Formulario de contacto</h2>
+  <form method="POST">
+      {{ form.hidden_tag() }}
+      <div class="form-group">
+          {{ form.nombre.label }}
+          {{ form.nombre(class="form-control") }}
+      </div>
+      {{ form.enviar(class="btn btn-primary") }}
   </form>
 {% endblock %}

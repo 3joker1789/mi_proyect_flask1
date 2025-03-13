@@ -1,38 +1,46 @@
-from flask import Flask, render_template, redirect, url_for, request, session
+from flask import Flask, render_template, redirect, url_for
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Email
+from wtforms.validators import DataRequired
 
+# --------------------------
+# 1. Configuración inicial
+# --------------------------
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'tu_clave_secreta_aqui'  # Cambia esto en producción
+app.config['SECRET_KEY'] = 'tu-clave-secreta'  # Obligatorio para CSRF
 
+
+# --------------------------
+# 2. Definición de formularios
+# --------------------------
 class MiFormulario(FlaskForm):
-    nombre = StringField('Nombre', validators=[DataRequired(message="El nombre es obligatorio")])
-    email = StringField('Email', validators=[
-        DataRequired(message="El email es obligatorio"),
-        Email(message="Formato de email inválido")
-    ])
+    nombre = StringField('Nombre:', validators=[DataRequired()])
     enviar = SubmitField('Enviar')
 
+
+# --------------------------
+# 3. Rutas de la aplicación
+# --------------------------
 @app.route('/')
-def index():
+def home():
     return render_template('index.html')
 
+
+# Ruta del formulario (debe estar después de la clase del formulario)
 @app.route('/formulario', methods=['GET', 'POST'])
 def formulario():
     form = MiFormulario()
+
     if form.validate_on_submit():
-        # Redirige a resultado con parámetros en la URL
-        return redirect(url_for('resultado',
-                               nombre=form.nombre.data,
-                               email=form.email.data))
+        # Si el formulario es válido, procesar datos
+        nombre = form.nombre.data
+        return render_template('resultado.html', nombre=nombre)
+
     return render_template('formulario.html', form=form)
 
-@app.route('/resultado')
-def resultado():
-    nombre = request.args.get('nombre')
-    email = request.args.get('email')
-    return render_template('resultado.html', nombre=nombre, email=email)
 
+# --------------------------
+# 4. Ejecución de la app
+# --------------------------
 if __name__ == '__main__':
     app.run(debug=True)
