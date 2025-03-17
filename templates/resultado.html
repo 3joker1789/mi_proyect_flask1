@@ -1,5 +1,11 @@
- {% extends 'base.html' %}
-{% block content %}
-  <h1>¡Gracias por enviar el formulario, {{ nombre }}!</h1>
-  <a href="{{ url_for('formulario') }}">Volver al formulario</a>
-{% endblock %}
+ <!DOCTYPE html>
+<html>
+<head>
+    <title>Resultado</title>
+</head>
+<body>
+    <h1>¡Datos guardados!</h1>
+    <p>Nombre: {{ nombre }}</p>
+    <a href="{{ url_for('formulario') }}">Volver</a>
+</body>
+</html>

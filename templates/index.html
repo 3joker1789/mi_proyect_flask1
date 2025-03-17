@@ -1,5 +1,10 @@
-{% extends "base.html" %}
-{% block title %}Inicio{% endblock %}
-{% block content %}
-<h1>Bienvenido a mi sitio</h1>
-{% endblock %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inicio</title>
+</head>
+<body>
+    <h1>Bienvenido</h1>
+    <a href="{{ url_for('formulario') }}">Ir al formulario</a>
+</body>
+</html>
