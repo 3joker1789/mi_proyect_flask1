@@ -1,132 +1,154 @@
-# ------------ Importaciones ------------
-from flask import Flask, render_template, request, redirect, url_for
+# app.py
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Email
+from wtforms import StringField, PasswordField, validators
 from flask_sqlalchemy import SQLAlchemy
-import json
-import csv
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 import os
-from dotenv import load_dotenv  # Para variables de entorno
+import csv
+import json
+from conexion.conexion import mysql
 
-# Cargar variables de entorno
-load_dotenv()
-
-# ------------ Configuración de Flask y MySQL ------------
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')  # Clave desde .env
-
-# Configuración corregida de MySQL (usa tu nombre de BD real)
-app.config[
-    'SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@localhost/{os.getenv('DB_NAME')}"
+app.config['SECRET_KEY'] = 'tu-clave-secreta'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database/usuarios.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Configuración MySQL
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_DB'] = 'desarrollo_web'
+mysql.init_app(app)
+
 db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 
-# ------------ Modelo de Base de Datos (Versión Mejorada) ------------
+# Formulario con validación
+class RegistroForm(FlaskForm):
+    nombre = StringField('Nombre', [validators.DataRequired()])
+    email = StringField('Email', [validators.DataRequired(), validators.Email()])
+    password = PasswordField('Password', [validators.DataRequired()])
+
+
+# Modelo SQLite
 class Usuario(db.Model):
-    __tablename__ = 'usuarios'
-    id_usuario = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nombre = db.Column(db.String(50), nullable=False)
-    mail = db.Column(db.String(100), nullable=False, unique=True, index=True)  # Índice para búsquedas
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(80))
+    email = db.Column(db.String(120))
 
 
-# ------------ Formulario WTForms (Con Validación de Email) ------------
-class MiFormulario(FlaskForm):
-    nombre = StringField('Nombre:', validators=[DataRequired(message="Campo obligatorio")])
-    mail = StringField('Email:', validators=[
-        DataRequired(message="Campo obligatorio"),
-        Email(message="Formato de email inválido")
-    ])
-    enviar = SubmitField('Enviar')
+# Modelo MySQL
+class User(UserMixin):
+    def __init__(self, id_usuario, nombre, email):
+        self.id = id_usuario
+        self.nombre = nombre
+        self.email = email
 
 
-# ------------ Funciones de Persistencia (Con Manejo de Errores) ------------
-def guardar_en_archivo(datos, formato):
-    try:
-        base_path = 'static/datos'
-        os.makedirs(base_path, exist_ok=True)
-
-        if formato == 'txt':
-            with open(f'{base_path}/datos.txt', 'a', encoding='utf-8') as f:
-                f.write(f"{datos['nombre']} | {datos['mail']}\n")
-
-        elif formato == 'json':
-            with open(f'{base_path}/datos.json', 'a', encoding='utf-8') as f:
-                json.dump(datos, f, ensure_ascii=False)
-                f.write('\n')
-
-        elif formato == 'csv':
-            file_exists = os.path.isfile(f'{base_path}/datos.csv')
-            with open(f'{base_path}/datos.csv', 'a', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                if not file_exists:
-                    writer.writerow(['Nombre', 'Email'])
-                writer.writerow([datos['nombre'], datos['mail']])
-
-        return True
-    except Exception as e:
-        print(f"Error al guardar en {formato}: {str(e)}")
-        return False
+@login_manager.user_loader
+def load_user(user_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
+    usuario = cursor.fetchone()
+    if usuario:
+        return User(id_usuario=usuario[0], nombre=usuario[1], email=usuario[2])
+    return None
 
 
-def guardar_en_db(nombre, mail):
-    try:
-        if not Usuario.query.filter_by(mail=mail).first():
-            usuario = Usuario(nombre=nombre, mail=mail)
-            db.session.add(usuario)
-            db.session.commit()
-            return True
-        return False  # Email ya existe
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error en DB: {str(e)}")
-        return False
-
-
-# ------------ Rutas Mejoradas ------------
+# Rutas principales
 @app.route('/')
-def home():
-    return render_template('index.html', usuarios=Usuario.query.limit(5).all())
+def index():
+    return render_template('index.html')
 
 
 @app.route('/formulario', methods=['GET', 'POST'])
 def formulario():
-    form = MiFormulario()
-
+    form = RegistroForm()
     if form.validate_on_submit():
-        datos = {
-            'nombre': form.nombre.data.strip(),
-            'mail': form.mail.data.lower().strip()
-        }
+        # Persistencia en TXT
+        with open('datos/datos.txt', 'a') as f:
+            f.write(f"{form.nombre.data},{form.email.data}\n")
 
-        # Guardar en todos los formatos
-        resultados = {
-            'txt': guardar_en_archivo(datos, 'txt'),
-            'json': guardar_en_archivo(datos, 'json'),
-            'csv': guardar_en_archivo(datos, 'csv'),
-            'db': guardar_en_db(datos['nombre'], datos['mail'])
-        }
+        # Persistencia en JSON
+        data = {'nombre': form.nombre.data, 'email': form.email.data}
+        with open('datos/datos.json', 'a') as f:
+            json.dump(data, f)
+            f.write('\n')
 
-        if all(resultados.values()):
-            return redirect(url_for('exito'))
-        else:
-            return render_template('error.html', errores=resultados)
+        # Persistencia en CSV
+        with open('datos/datos.csv', 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([form.nombre.data, form.email.data])
 
+        # Persistencia en SQLite
+        nuevo_usuario = Usuario(nombre=form.nombre.data, email=form.email.data)
+        db.session.add(nuevo_usuario)
+        db.session.commit()
+
+        return redirect(url_for('resultado', nombre=form.nombre.data))
     return render_template('formulario.html', form=form)
 
 
-# ------------ Inicialización Segura ------------
+# Rutas de persistencia
+@app.route('/datos-txt')
+def ver_txt():
+    with open('datos/datos.txt', 'r') as f:
+        datos = f.readlines()
+    return render_template('resultado.html', datos=datos)
+
+
+@app.route('/datos-json')
+def ver_json():
+    datos = []
+    with open('datos/datos.json', 'r') as f:
+        for line in f:
+            datos.append(json.loads(line))
+    return jsonify(datos)
+
+
+# Autenticación
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    form = RegistroForm()
+    if form.validate_on_submit():
+        cursor = mysql.connection.cursor()
+        cursor.execute("INSERT INTO usuarios (nombre, email, password) VALUES (%s, %s, %s)",
+                       (form.nombre.data, form.email.data, form.password.data))
+        mysql.connection.commit()
+        return redirect(url_for('login'))
+    return render_template('registro.html', form=form)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    form = RegistroForm()
+    if form.validate_on_submit():
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE email = %s", (form.email.data,))
+        usuario = cursor.fetchone()
+        if usuario and usuario[3] == form.password.data:
+            user = User(id_usuario=usuario[0], nombre=usuario[1], email=usuario[2])
+            login_user(user)
+            return redirect(url_for('protegido'))
+    return render_template('login.html', form=form)
+
+
+@app.route('/protegido')
+@login_required
+def protegido():
+    return "Página protegida"
+
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
+
 if __name__ == '__main__':
     with app.app_context():
-        try:
-            db.create_all()
-            print("Tablas creadas exitosamente")
-        except Exception as e:
-            print(f"Error al crear tablas: {str(e)}")
-
-    # Verificar/crear directorio de datos
-    os.makedirs('static/datos', exist_ok=True)
-
-    app.run(debug=True, port=5001)  # Puerto alternativo para evitar conflictos
+        db.create_all()
+    app.run(debug=True)

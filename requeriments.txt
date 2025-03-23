@@ -1,1 +1,6 @@
-pip freeze
+flask
+flask-wtf
+flask-sqlalchemy
+flask-login
+mysql-connector-python
+python-dotenv
