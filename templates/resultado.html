@@ -1,11 +1,14 @@
- <!DOCTYPE html>
-<html>
-<head>
-    <title>Resultado</title>
-</head>
-<body>
-    <h1>¡Datos guardados!</h1>
-    <p>Nombre: {{ nombre }}</p>
-    <a href="{{ url_for('formulario') }}">Volver</a>
-</body>
-</html>
+ {% extends "base.html" %}
+{% block title %}Resultado{% endblock %}
+
+{% block content %}
+    <div class="card shadow text-center">
+        <div class="card-header bg-info text-white">
+            <h2 class="mb-0">¡Registro Exitoso!</h2>
+        </div>
+        <div class="card-body">
+            <p class="lead">Gracias por registrarte, {{ nombre }}!</p>
+            <a href="{{ url_for('home') }}" class="btn btn-primary">Volver al Inicio</a>
+        </div>
+    </div>
+{% endblock %}

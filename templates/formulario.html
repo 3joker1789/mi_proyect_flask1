@@ -1,15 +1,33 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Formulario</title>
-</head>
-<body>
-    <h1>Formulario</h1>
-    <form method="POST">
-        {{ form.hidden_tag() }}
-        <p>{{ form.nombre.label }}<br>{{ form.nombre() }}</p>
-        <p>{{ form.mail.label }}<br>{{ form.mail() }}</p>
-        <p>{{ form.enviar() }}</p>
-    </form>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Formulario{% endblock %}
+
+{% block content %}
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h2 class="mb-0">Formulario de Registro</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    {{ form.nombre.label(class="form-label") }}
+                    {{ form.nombre(class="form-control" + (' is-invalid' if form.nombre.errors)) }}
+                    {% for error in form.nombre.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.mail.label(class="form-label") }}
+                    {{ form.mail(class="form-control" + (' is-invalid' if form.mail.errors)) }}
+                    {% for error in form.mail.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary">{{ form.enviar.label }}</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

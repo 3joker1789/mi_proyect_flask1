@@ -1,10 +1,23 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Inicio</title>
-</head>
-<body>
-    <h1>Bienvenido</h1>
-    <a href="{{ url_for('formulario') }}">Ir al formulario</a>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">Bienvenido</h2>
+        </div>
+        <div class="card-body">
+            <p class="lead">Últimos usuarios registrados:</p>
+            <ul class="list-group">
+                {% for usuario in usuarios %}
+                <li class="list-group-item">
+                    {{ usuario.nombre }} - {{ usuario.mail }}
+                </li>
+                {% else %}
+                <li class="list-group-item">No hay usuarios registrados</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

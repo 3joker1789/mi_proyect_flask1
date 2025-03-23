@@ -1,13 +1,13 @@
-# app.py
-from flask import Flask, render_template, request, redirect, url_for, jsonify
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, validators
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
-import os
+
 import csv
 import json
-from conexion.conexion import mysql
+
+import mysql
+from flask import Flask, render_template, redirect, url_for, jsonify
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, validators
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'tu-clave-secreta'
@@ -50,7 +50,7 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    cursor = mysql.connection.cursor()
+    cursor: object = mysql.connection.cursor()
     cursor.execute("SELECT * FROM usuarios WHERE id_usuario = %s", (user_id,))
     usuario = cursor.fetchone()
     if usuario:
