@@ -9,7 +9,7 @@ app.secret_key = 'clave-secreta-ultrasegura'
 # Configuración MySQL (¡AJUSTA ESTOS VALORES!)
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''  # Tu contraseña de MySQL
+app.config['MYSQL_PASSWORD'] = '1234567'  # Tu contraseña de MySQL
 app.config['MYSQL_DB'] = 'desarrollo_web'
 
 mysql = MySQL(app)
