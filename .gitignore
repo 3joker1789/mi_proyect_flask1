@@ -1,8 +1,6 @@
 __pycache__/
-venv/
 *.pyc
 .env
-static/datos/*
-!static/datos/.gitkeep
-static/database/*
-!static/database/.gitkeep
+venv/
+*.sqlite
+/database/usuarios.db
