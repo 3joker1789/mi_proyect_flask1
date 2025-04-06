@@ -1,6 +1,4 @@
 flask==2.0.3
-flask-wtf==1.0.0
-flask-login==0.5.0
 flask-mysqldb==0.2.0
-mysql-connector-python==8.0.28
+werkzeug==2.0.3
 python-dotenv==0.19.2

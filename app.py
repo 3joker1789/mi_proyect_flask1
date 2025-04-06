@@ -1,107 +1,110 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_mysqldb import MySQL
-from flask_wtf import FlaskForm
-from wtforms import StringField, DecimalField, IntegerField, validators
+from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 app = Flask(__name__)
-app.secret_key = 'clave-secreta-ultrasegura'
+app.secret_key = os.urandom(24)
 
-# Configuración MySQL (¡AJUSTA ESTOS VALORES!)
+# Configuración MySQL
 app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '1234567'  # Tu contraseña de MySQL
-app.config['MYSQL_DB'] = 'desarrollo_web'
+app.config['MYSQL_USER'] = 'tu_usuario'
+app.config['MYSQL_PASSWORD'] = 'tu_contraseña'
+app.config['MYSQL_DB'] = 'tienda_flask'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 
 
-# Formulario de Producto
-class ProductoForm(FlaskForm):
-    nombre = StringField('Nombre', [validators.DataRequired()])
-    precio = DecimalField('Precio', [validators.DataRequired()], places=2)
-    stock = IntegerField('Stock', [validators.DataRequired()])
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = generate_password_hash(request.form['password'])
+
+        cursor = mysql.connection.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO usuarios (username, email, password) VALUES (%s, %s, %s)",
+                (username, email, password)
+            )
+            mysql.connection.commit()
+            flash('Registro exitoso! Por favor inicia sesión.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(f'Error: {str(e)}', 'danger')
+        finally:
+            cursor.close()
+
+    return render_template('registro.html')
 
 
-# Rutas CRUD
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
+        user = cursor.fetchone()
+        cursor.close()
+
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            flash('Inicio de sesión exitoso!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Usuario o contraseña incorrectos', 'danger')
+
+    return render_template('login.html')
 
 
-@app.route('/crear', methods=['GET', 'POST'])
+@app.route('/productos/crear', methods=['GET', 'POST'])
+@login_required
 def crear_producto():
-    form = ProductoForm()
-    if form.validate_on_submit():
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio = request.form['precio']
+        stock = request.form['stock']
+
+        cursor = mysql.connection.cursor()
         try:
-            cursor = mysql.connection.cursor()
             cursor.execute(
-                "INSERT INTO productos (nombre, precio, stock) VALUES (%s, %s, %s)",
-                (form.nombre.data, float(form.precio.data), form.stock.data)
+                "INSERT INTO productos (nombre, precio, stock, usuario_id) VALUES (%s, %s, %s, %s)",
+                (nombre, precio, stock, session['user_id'])
             )
             mysql.connection.commit()
-            cursor.close()
-            flash('Producto creado exitosamente', 'success')
+            flash('Producto creado exitosamente!', 'success')
             return redirect(url_for('listar_productos'))
         except Exception as e:
             flash(f'Error: {str(e)}', 'danger')
-    return render_template('crear_producto.html', form=form)
+        finally:
+            cursor.close()
 
-
+    return render_template('crear_producto.html')
 @app.route('/productos')
+@login_required
 def listar_productos():
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute("SELECT * FROM productos")
-        productos = cursor.fetchall()
-        cursor.close()
-        return render_template('productos.html', productos=productos)
-    except Exception as e:
-        flash(f'Error: {str(e)}', 'danger')
-        return redirect(url_for('index'))
-
-
-@app.route('/editar/<int:id>', methods=['GET', 'POST'])
-def editar_producto(id):
     cursor = mysql.connection.cursor()
-    if request.method == 'GET':
-        cursor.execute("SELECT * FROM productos WHERE id_producto = %s", (id,))
-        producto = cursor.fetchone()
-        form = ProductoForm(data={
-            'nombre': producto[1],
-            'precio': float(producto[2]),
-            'stock': producto[3]
-        })
-        cursor.close()
-        return render_template('editar_producto.html', form=form, id=id)
+    cursor.execute(
+        "SELECT * FROM productos WHERE usuario_id = %s",
+        (session['user_id'],)
+    )
+    productos = cursor.fetchall()
+    cursor.close()
+    return render_template('productos.html', productos=productos)
+from functools import wraps
 
-    form = ProductoForm()
-    if form.validate_on_submit():
-        try:
-            cursor.execute(
-                "UPDATE productos SET nombre = %s, precio = %s, stock = %s WHERE id_producto = %s",
-                (form.nombre.data, float(form.precio.data), form.stock.data, id)
-            )
-            mysql.connection.commit()
-            cursor.close()
-            flash('Producto actualizado correctamente', 'success')
-            return redirect(url_for('listar_productos'))
-        except Exception as e:
-            flash(f'Error: {str(e)}', 'danger')
-    return redirect(url_for('editar_producto', id=id))
-
-
-@app.route('/eliminar/<int:id>', methods=['POST'])
-def eliminar_producto(id):
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute("DELETE FROM productos WHERE id_producto = %s", (id,))
-        mysql.connection.commit()
-        cursor.close()
-        flash('Producto eliminado correctamente', 'success')
-    except Exception as e:
-        flash(f'Error: {str(e)}', 'danger')
-    return redirect(url_for('listar_productos'))
-
-
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Por favor inicia sesión primero', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 if __name__ == '__main__':
     app.run(debug=True)
